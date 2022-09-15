@@ -1,31 +1,17 @@
-const { nanoid } = require('nanoid');
-const { Pool } = require('pg');
-const { validatePayload } = require('../validator/validator');
-const InvariantError = require('../exceptions/InvariantError');
-const ClientError = require('../exceptions/ClientError');
-const NotFoundError = require('../exceptions/NotFoundError');
-
-const pool = new Pool();
+const { validatePayload } = require('../../validator/index');
+const ClientError = require('../../exceptions/ClientError');
+const {
+  postAlbumServices, getAlbumServices, putAlbumServices, deleteAlbumServices,
+} = require('../../services/postgres/albumServices');
 
 const postAlbum = async (request, h) => {
   try {
     validatePayload('album', request.payload);
-
-    const { name, year } = request.payload;
-    const id = `album-${nanoid(16)}`;
-    const query = {
-      text: 'INSERT INTO albums VALUES($1, $2, $3) RETURNING id',
-      values: [id, name, year],
-    };
-
-    const result = await pool.query(query);
-
-    if (!result.rows[0].id) throw new InvariantError('Album gagal ditambahkan');
-
+    const albumId = await postAlbumServices(request.payload);
     const response = h.response({
       status: 'success',
       data: {
-        albumId: result.rows[0].id,
+        albumId,
       },
     });
 
@@ -55,33 +41,12 @@ const postAlbum = async (request, h) => {
 
 const getAlbum = async (request, h) => {
   try {
-    const { id } = request.params;
-
-    const songQuery = {
-      text: 'SELECT id, title, performer FROM songs WHERE "albumId" = $1',
-      values: [id],
-    };
-
-    const songResult = await pool.query(songQuery);
-
-    const query = {
-      text: 'SELECT * FROM albums WHERE id = $1',
-      values: [id],
-    };
-
-    const result = await pool.query(query);
-
-    if (!result.rows.length) throw new NotFoundError('Album tidak ditemukan');
+    const albumDetails = await getAlbumServices(request.params);
 
     const response = h.response({
       status: 'success',
       data: {
-        album: {
-          id: result.rows[0].id,
-          name: result.rows[0].name,
-          year: result.rows[0].year,
-          songs: songResult.rows,
-        },
+        album: albumDetails,
       },
     });
 
@@ -112,17 +77,8 @@ const getAlbum = async (request, h) => {
 const putAlbum = async (request, h) => {
   try {
     validatePayload('album', request.payload);
-    const { id } = request.params;
-    const { name, year } = request.payload;
 
-    const query = {
-      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 returning id',
-      values: [name, year, id],
-    };
-
-    const result = await pool.query(query);
-
-    if (!result.rows.length) throw new NotFoundError('Gagal mengubah album, album tidak ditemukan');
+    await putAlbumServices(request.params, request.payload);
 
     const response = h.response({
       status: 'success',
@@ -155,15 +111,7 @@ const putAlbum = async (request, h) => {
 
 const deleteAlbum = async (request, h) => {
   try {
-    const { id } = request.params;
-    const query = {
-      text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
-      values: [id],
-    };
-
-    const result = await pool.query(query);
-
-    if (!result.rows.length) throw new NotFoundError('Album gagal dihapus. Album tidak ditemukan');
+    await deleteAlbumServices(request.params);
 
     const response = h.response({
       status: 'success',

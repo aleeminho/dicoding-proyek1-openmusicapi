@@ -1,9 +1,9 @@
 const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
-const { validatePayload } = require('../validator/validator');
-const InvariantError = require('../exceptions/InvariantError');
-const ClientError = require('../exceptions/ClientError');
-const NotFoundError = require('../exceptions/NotFoundError');
+const { validatePayload } = require('../../validator/index');
+const InvariantError = require('../../exceptions/InvariantError');
+const ClientError = require('../../exceptions/ClientError');
+const NotFoundError = require('../../exceptions/NotFoundError');
 
 const pool = new Pool();
 
